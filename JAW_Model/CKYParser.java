@@ -1,5 +1,3 @@
-package nlp.parser;
-
 import java.io.FileNotFoundException;
 import java.io.*;
 import java.util.*;
@@ -74,22 +72,30 @@ public class CKYParser {
         /// CKYParser parser = new CKYParser(grammarFile);
         // parser.parseFile(sentencesFile);
 
-        String folderPath = "C:\\Users\\Joshua G-K\\Documents\\College\\Junior Year\\NLPs\\hw4\\data\\";
-        String fileName = "example.pcfg";
-        String sentence1 = "Mary likes John .";
-        String sentence2 = "John codes with John .";
-        String sentence3 = "Mary likes to code .";
-        String sentence4 = "write giant programs .";
-        String sentence5 = "giant programs write John .";
+        // String folderPath = "C:\\Users\\Joshua G-K\\Documents\\College\\Junior
+        // Year\\NLPs\\hw4\\data\\";
+        // String fileName = "example.pcfg";
+        // String sentence1 = "Mary likes John .";
+        // String sentence2 = "John codes with John .";
+        // String sentence3 = "Mary likes to code .";
+        // String sentence4 = "write giant programs .";
+        // String sentence5 = "giant programs write John .";
 
-        CKYParser parser = new CKYParser(folderPath + fileName);
-        parser.parseSentence(sentence1);
-        parser.parseSentence(sentence2);
-        parser.parseSentence(sentence3);
-        parser.parseSentence(sentence4);
-        parser.parseSentence(sentence5);
+        // CKYParser parser = new CKYParser(folderPath + fileName);
+        // parser.parseSentence(sentence1);
+        // parser.parseSentence(sentence2);
+        // parser.parseSentence(sentence3);
+        // parser.parseSentence(sentence4);
+        // parser.parseSentence(sentence5);
+
+        String dataDirectory = "C:\\Users\\Joshua G-K\\Documents\\College\\Junior Year\\NLPs\\final_projectv2\\NLPs_final_project\\JAW_Model\\Data\\";
+        String filePathPCFG = dataDirectory + "full.pcfg";
+        CKYParser parser = new CKYParser(filePathPCFG);
     }
 
+    /**
+     * File name to grammar
+     */
     public CKYParser(String filename) {
         // Initialize variables
         this.unaryRulesMap = new HashMap<>();
@@ -180,7 +186,7 @@ public class CKYParser {
             // Loop through all the hash maps in lexicalRulesMap[word]
             HashMap<String, Double> secondLayer = lexicalRulesMap.get(word);
             if (secondLayer == null) {
-                System.out.println(NULL_STRING);
+                System.out.println("Second layer null: " + NULL_STRING + " | Word: " + word);
                 return null;
             }
             CKYEntry newEntry = new CKYEntry();
@@ -253,7 +259,7 @@ public class CKYParser {
         CKYEntry root = array[0][sentenceWordCount - 1];
         String lhs = "S";
         if (!root.isSentence()) {
-            System.out.print(NULL_STRING);
+            System.out.print("Null string: " + NULL_STRING);
             return null;
         }
 

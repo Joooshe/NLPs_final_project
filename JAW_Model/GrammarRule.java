@@ -1,4 +1,3 @@
-package nlp.parser;
 import java.util.*;
 import java.util.regex.*;
 

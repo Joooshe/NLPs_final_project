@@ -1,5 +1,3 @@
-package nlp.parser;
-
 import java.util.*;
 
 public class CKYEntry {

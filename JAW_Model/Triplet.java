@@ -1,5 +1,3 @@
-package nlp.parser;
-
 enum RuleType {
     LEXICAL, UNARY, BINARY
 }
