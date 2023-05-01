@@ -1,9 +1,9 @@
-import java.io.FileNotFoundException;
 import java.io.*;
 import java.util.*;
 
 public class CKYParser {
     public static final String NULL_STRING = "NULL";
+    public static final Double RECONSTRUCT_FACTOR = 0.9;
     /*
      * Unary rules hashmap
      * - This will map all the Unary rules on the rhs to the rule on the lhs and
@@ -41,6 +41,21 @@ public class CKYParser {
      * then we can add it to the set for this cky's entries
      */
     public ArrayList<GrammarRule> binaryRules;
+
+    /**
+     * Set of grammar rules to keep them all in one place 
+     */
+    public HashMap<String, GrammarRule> grammarRuleSet;
+
+    /**
+     * Stores rhs's mapped to LHS's and a probability, used for JAW model 
+     */
+    public HashMap<String, PriorityQueue<GrammarRule>> rhsToGrammarRule;
+
+    /**
+     * Stores a lhs to grammar rule 
+     */
+    public HashMap<String, PriorityQueue<GrammarRule>> lhsToGrammarRule;
 
     /*
      * The algorith for init our PCFG:
@@ -101,6 +116,9 @@ public class CKYParser {
         this.unaryRulesMap = new HashMap<>();
         this.lexicalRulesMap = new HashMap<>();
         this.binaryRules = new ArrayList<>();
+        this.rhsToGrammarRule = new HashMap<>();
+        this.lhsToGrammarRule = new HashMap<>();
+        this.grammarRuleSet = new HashMap<>();
         // Read one line at a time
         // For each line pass it into the grammarRule class to make a grammar rule
         // Then we check for 3 things:
@@ -114,29 +132,74 @@ public class CKYParser {
         // Else then the grammar is a non-lexical binary rule:
         // We add the grammar rule to the array list binaryRules
         File file = new File(filename);
-
+        int count = 0;
         try {
             // Make into a parse tree and store in the array list
             String spaceDelimiter = "(\\s)+";
-            Scanner scanner = new Scanner(file).useDelimiter(spaceDelimiter);
-            while (scanner.hasNextLine()) {
-                String line = scanner.nextLine();
-                GrammarRule grammarRule = new GrammarRule(line);
+            BufferedReader scanner = new BufferedReader(new FileReader(filename));
 
+            String line = "_";
+            while (line != null) {
+                line = scanner.readLine();
+                if (line == null) {
+                    break;
+                }
+                count +=1;
+                GrammarRule grammarRule = new GrammarRule(line);
+                this.grammarRuleSet.put(grammarRule.createSudoHash(), grammarRule);
+                // Add current grammar to lhs to grammar rule 
+                String lhs = grammarRule.getLhs();
+                if (lhsToGrammarRule.containsKey(lhs)) {
+                    lhsToGrammarRule.get(lhs).add(grammarRule);
+                } else {
+                    lhsToGrammarRule.put(lhs, new PriorityQueue<>(1, new GrammarRuleCompare()));
+                }
                 if (grammarRule.numRhsElements() > 1) {
+                    // Adds current grammar rule to rhs to grammar rule 
+                    String rhs0 = grammarRule.getRhs().get(0);
+                    if (rhsToGrammarRule.containsKey(rhs0)) {
+                        rhsToGrammarRule.get(rhs0).add(grammarRule);
+                    } else {
+                        rhsToGrammarRule.put(rhs0, new PriorityQueue<>(1, new GrammarRuleCompare()));
+                    }
+                    String rhs1 = grammarRule.getRhs().get(1);
+                    if (rhsToGrammarRule.containsKey(rhs1)) {
+                        rhsToGrammarRule.get(rhs1).add(grammarRule);
+                    } else {
+                        rhsToGrammarRule.put(rhs1, new PriorityQueue<>(1, new GrammarRuleCompare()));
+                    }
+                    // Adds current grammar rule to binaryRules map 
                     this.binaryRules.add(grammarRule);
                 } else if (grammarRule.isLexical()) {
                     HashMap<String, Double> secondLayer = new HashMap<>();
                     secondLayer.put(grammarRule.getLhs(), grammarRule.getWeight());
                     this.lexicalRulesMap.put(grammarRule.getRhs().get(0), secondLayer);
+                    
+                    // Adds current grammar rule to rhs to grammar rule 
+                    String rhs0 = grammarRule.getRhs().get(0);
+                    if (rhsToGrammarRule.containsKey(rhs0)) {
+                        rhsToGrammarRule.get(rhs0).add(grammarRule);
+                    } else {
+                        rhsToGrammarRule.put(rhs0, new PriorityQueue<>(1, new GrammarRuleCompare()));
+                    }
+
                 } else {
                     HashMap<String, Double> secondLayer = new HashMap<>();
                     secondLayer.put(grammarRule.getLhs(), grammarRule.getWeight());
                     this.unaryRulesMap.put(grammarRule.getRhs().get(0), secondLayer);
+                    
+                    // Adds current grammar rule to rhs to grammar rule 
+                    String rhs0 = grammarRule.getRhs().get(0);
+                    if (rhsToGrammarRule.containsKey(rhs0)) {
+                        rhsToGrammarRule.get(rhs0).add(grammarRule);
+                    } else {
+                        rhsToGrammarRule.put(rhs0, new PriorityQueue<>(1, new GrammarRuleCompare()));
+                    }
                 }
             }
+            // System.out.printf("Count: %d\n", count);
             scanner.close();
-        } catch (FileNotFoundException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -265,7 +328,7 @@ public class CKYParser {
 
         ParseTree finTree = buildTree(root, lhs);
 
-        System.out.println(finTree + "\t" + root.getWeight("S"));
+        // System.out.println(finTree + "\t" + root.getWeight("S"));
         return finTree;
     }
 
@@ -294,5 +357,34 @@ public class CKYParser {
         // Return
         return parseTreeParent;
     }
+
+    public HashMap<String, PriorityQueue<GrammarRule>> getrhsToGrammarRule() {
+        return this.rhsToGrammarRule;
+    }
+
+    public HashMap<String, HashMap<String, Double>> getUnaryRulesMap() {
+        return this.unaryRulesMap;
+    }
+
+    public void updateGrammarRules(ParseTree tree) {
+        if(tree.isTerminal()) {
+            return;
+        }
+
+        String lhs = tree.getLabel();
+        ArrayList<String> rhs = tree.getChildrenLabels();
+        GrammarRule constructed_rule = new GrammarRule(lhs, rhs);
+
+        GrammarRule true_rule = this.grammarRuleSet.get(constructed_rule.createSudoHash());
+        true_rule.setWeight(true_rule.getWeight()*RECONSTRUCT_FACTOR);
+
+        for(ParseTree t: tree.getChildren()) {
+            if(t != null) {
+                updateGrammarRules(t);
+            }
+        }
+    }
+
+
 
 }

@@ -179,6 +179,26 @@ public class GrammarRule {
 	}
 	
 	/**
+	 * A string representation of this node using arrow notation, e.g.:
+	 * S -> NP VP
+	 */
+	public String createSudoHash(){
+		StringBuffer buffer = new StringBuffer();
+		
+		buffer.append(lhs);
+		buffer.append(" ");
+		
+		for( String s: rhs ){
+			buffer.append(s + " ");
+		}
+		
+		// delete the trailing whitespace
+		buffer.deleteCharAt(buffer.length()-1);
+		
+		return buffer.toString();
+	}
+
+	/**
 	 * The hashcode utilizes the String's hashcode method.
 	 */
 	public int hashCode(){
