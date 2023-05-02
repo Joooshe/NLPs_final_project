@@ -334,7 +334,7 @@ public class CKYParser {
     }
 
     public void updateGrammarRules(ParseTree tree) {
-        if(tree.isTerminal()) {
+        if(tree == null || tree.isTerminal()) {
             return;
         }
 

@@ -27,14 +27,19 @@ public class JAW {
         String testSentencesPath = dataDirectory + "test.sentences";
         String exampleDataPath = dataDirectory + "testingDataExample.txt";
         String trainingDataPath = dataDirectory + "trainingData.txt";
+        String testingDataPath = dataDirectory + "testingData.txt";
         String examplePCFGPath = dataDirectory + "example.pcfg";
         String fullPCFGPath = dataDirectory + "full.pcfg";
-        JAW jaw = new JAW(trainingDataPath, fullPCFGPath);
-        jaw.generateFromSeedWord("Joshua");
+        JAW jaw = new JAW(trainingDataPath, testingDataPath, fullPCFGPath);
+        jaw.evaluateModel("William");
     }
 
     // Array list to store the parse trees for trainingData
     private ArrayList<ParseTree> trainingParseTrees;
+
+    
+    // Array list to store the parse trees for testing
+    private ArrayList<ParseTree> testingParseTrees;
 
     // Create a variable to store our cky parser
     private CKYParser parser;
@@ -45,33 +50,15 @@ public class JAW {
      * It will then update the PCFG based on these parse trees using a probabilistic
      * approach.
      */
-    public JAW(String trainingData, String filePathPCFG) {
+    public JAW(String trainingData, String testingData, String filePathPCFG) {
         // Initialize variables
         System.out.println(filePathPCFG);
         this.parser = new CKYParser(filePathPCFG);
         this.trainingParseTrees = new ArrayList<>();
-        BufferedReader reader;
-        try {
-            reader = new BufferedReader(new FileReader(trainingData));
-            String line = reader.readLine();
-            String whiteSpaceDelimiter = "\\s+";
-            // Adds all stop list items ot a stop list hashset
-            while (line != null) {
-                // Clean line
-                String cleanedLine = line;// cleanSentence(line);
-                System.out.println(cleanedLine);
-                // Plug cleaned lined into parser
-                ParseTree trainingTree = parser.parseSentence(cleanedLine);
-
-                // Put the resulting parse tree in an array list
-                trainingParseTrees.add(trainingTree);
-
-                line = reader.readLine();
-            }
-            reader.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        this.testingParseTrees = new ArrayList<>();
+        
+        this.generateParseTrees(parser, trainingParseTrees, trainingData);
+        this.generateParseTrees(parser, testingParseTrees, testingData);
 
         // System.out.println("PREVIOUS GRAMMAR SET");
         // for (GrammarRule rule : parser.grammarRuleSet.values()) {
@@ -91,6 +78,32 @@ public class JAW {
         // }
 
         System.out.println(this.trainingParseTrees);
+    }
+
+    public void generateParseTrees(CKYParser parser, ArrayList<ParseTree> parseTreeList, String data) {
+        BufferedReader reader;
+        try {
+            reader = new BufferedReader(new FileReader(data));
+            String line = reader.readLine();
+            String whiteSpaceDelimiter = "\\s+";
+            // Adds all stop list items ot a stop list hashset
+            while (line != null) {
+                // We actually don't clean the sentences because the pcfg is not cleaned
+                String cleanedLine = cleanSentence(line);
+                System.out.println(cleanedLine);
+                // Plug cleaned lined into parser
+                ParseTree trainingTree = parser.parseSentence(cleanedLine);
+
+                // Put the resulting parse tree in an array list
+                parseTreeList.add(trainingTree);
+
+                line = reader.readLine();
+            }
+            reader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        System.out.println("Parse Tree List: " + parseTreeList);
     }
 
     /**
@@ -340,28 +353,102 @@ public class JAW {
     }
 
     /**
-     * 
+     *  Evalution
      */
-    public Double evaluteModel() {
+    public Double calculatePrecisionRecall(ParseTree tree1, ParseTree tree2) {
         // Get x amount of random words and run generateFromSeedWord on each of those
         // words
+        int matchedNodes = countMatchedNodes(tree1, tree2);
+        int totalNodes1 = countTotalNodes(tree1);
+        int totalNodes2 = countTotalNodes(tree2);
 
-        // Use precision recall to compare the grammar tree gotten from
-        // generateFromSeedWord to the
-        // grammar tree's from our training data and take an average
-        // (Probable will need helper functio nfor precision recall)
-        return 0.0;
+        double precision = (double) matchedNodes / totalNodes1;
+        double recall = (double) matchedNodes / totalNodes2;
+
+        return (2 * precision * recall) / (precision + recall);
     }
 
-    /**
-     * Calculates the average precision recall between one grammar tree and a list
-     * of grammar trees that have
-     * the same seedPartOfSpeech as that one grammar tree
-     */
-    public Double getPrecisionRecall(ParseTree tree, String seedPartOfSpeech) {
-        return 0.0;
+
+    private int countMatchedNodes(ParseTree tree1, ParseTree tree2) {
+        if (tree1 == null || tree2 == null || tree1.isTerminal() || tree2.isTerminal()) {
+            return 0;
+        }
+
+        int count;
+
+        if (tree1.getLabel().equals(tree2.getLabel())) {
+            count = 1;
+        } else {
+            count = 0;
+        }
+
+        for (int i = 0; i < Math.min(tree1.getChildren().size(), tree2.getChildren().size()); i++) {
+            count += countMatchedNodes(tree1.getChildren().get(i), tree2.getChildren().get(i));
+        }
+        
+        return count;
+
+
     }
 
+    private int countTotalNodes(ParseTree tree) {
+        if (tree == null || tree.isTerminal()) {
+            return 0;
+        }
+        int count = 1;
+
+        for (ParseTree child: tree.getChildren()) {
+            count += countTotalNodes(child);
+        }
+        return count;
+    }
+
+    public void evaluateModel(String seedWord) {
+        // Get the tree from the part of speech of the seed word 
+        HashMap<String, PriorityQueue<GrammarRule>> rhsToGrammarRule = this.parser.getRhsToGrammarRule();
+        String partOfSpeech;
+        if (rhsToGrammarRule.containsKey(seedWord)) {
+            partOfSpeech = rhsToGrammarRule.get(seedWord).peek().getLhs();
+        } else {
+            partOfSpeech = "NNP";
+        }
+        Double trainingDataPrecisionRecall = 0.0;
+        ParseTree generatedTree = this.generateTree(partOfSpeech);
+
+        // Get the training data average precision recall
+        for (ParseTree trainingTree : trainingParseTrees) {
+            trainingDataPrecisionRecall += this.calculatePrecisionRecall(trainingTree, generatedTree);
+        }
+        trainingDataPrecisionRecall = trainingDataPrecisionRecall / trainingParseTrees.size();
+        if (Double.isNaN(trainingDataPrecisionRecall)) {
+            trainingDataPrecisionRecall = 0.0;
+        }
+        // Get the testing data average precision recall 
+        Double testingDataPrecisionRecall = 0.0;
+        for (ParseTree parseTree : testingParseTrees) {
+            System.out.println("Parse tree: "+parseTree);
+            testingDataPrecisionRecall += this.calculatePrecisionRecall(parseTree, generatedTree);
+        }
+        System.out.println("TestingDataPrecisionRecall: " + testingDataPrecisionRecall);
+        
+        testingDataPrecisionRecall = testingDataPrecisionRecall / testingParseTrees.size();
+        if (Double.isNaN(testingDataPrecisionRecall)) {
+            testingDataPrecisionRecall = 0.0;
+        }
+
+        System.out.printf("trainingData: %f \t testingData: %f\n", trainingDataPrecisionRecall, testingDataPrecisionRecall);
+    }
+
+
+    // public String getRandomSeedWordFromTree(ParseTree tree) {
+    //     List<String> terminalNodes = new ArrayList<>();
+    //     return "";
+    // }
+
+  
+    
+
+    
     /**
      * Cleans a given word
      * 
@@ -386,16 +473,16 @@ public class JAW {
      * 
      */
     public static String cleanSentence(String sentence) {
-        // Gets rid of all accent marks on letters and makes it normal letter
-        sentence = Normalizer.normalize(sentence, Normalizer.Form.NFD);
+        // // Gets rid of all accent marks on letters and makes it normal letter
+        // sentence = Normalizer.normalize(sentence, Normalizer.Form.NFD);
         // Part of getting rid of accent marks
-        sentence = sentence.replaceAll("\\p{M}", "");
+        sentence = sentence.replaceAll("'(\\w)+", "\\s'$1");
         // Gets rid of spaces created from deleting spaces and dashes and such
         sentence = sentence.replaceAll("\\s+", " ");
-        // Makes word lower case
-        sentence = sentence.toLowerCase();
-        // Gets rid of all non-alphabetic words
-        sentence = sentence.replaceAll("[^\\w\\s]", "");
+        // // Makes word lower case
+        // sentence = sentence.toLowerCase();
+        // // Gets rid of all non-alphabetic words
+        // sentence = sentence.replaceAll("[^\\w\\s]", "");
         return sentence;
 
     }
