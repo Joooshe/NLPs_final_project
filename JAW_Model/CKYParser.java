@@ -147,54 +147,17 @@ public class CKYParser {
                 count +=1;
                 GrammarRule grammarRule = new GrammarRule(line);
                 this.grammarRuleSet.put(grammarRule.createSudoHash(), grammarRule);
-                // Add current grammar to lhs to grammar rule 
-                String lhs = grammarRule.getLhs();
-                if (lhsToGrammarRule.containsKey(lhs)) {
-                    lhsToGrammarRule.get(lhs).add(grammarRule);
-                } else {
-                    lhsToGrammarRule.put(lhs, new PriorityQueue<>(1, new GrammarRuleCompare()));
-                }
                 if (grammarRule.numRhsElements() > 1) {
-                    // Adds current grammar rule to rhs to grammar rule 
-                    String rhs0 = grammarRule.getRhs().get(0);
-                    if (rhsToGrammarRule.containsKey(rhs0)) {
-                        rhsToGrammarRule.get(rhs0).add(grammarRule);
-                    } else {
-                        rhsToGrammarRule.put(rhs0, new PriorityQueue<>(1, new GrammarRuleCompare()));
-                    }
-                    String rhs1 = grammarRule.getRhs().get(1);
-                    if (rhsToGrammarRule.containsKey(rhs1)) {
-                        rhsToGrammarRule.get(rhs1).add(grammarRule);
-                    } else {
-                        rhsToGrammarRule.put(rhs1, new PriorityQueue<>(1, new GrammarRuleCompare()));
-                    }
                     // Adds current grammar rule to binaryRules map 
                     this.binaryRules.add(grammarRule);
                 } else if (grammarRule.isLexical()) {
                     HashMap<String, Double> secondLayer = new HashMap<>();
                     secondLayer.put(grammarRule.getLhs(), grammarRule.getWeight());
                     this.lexicalRulesMap.put(grammarRule.getRhs().get(0), secondLayer);
-                    
-                    // Adds current grammar rule to rhs to grammar rule 
-                    String rhs0 = grammarRule.getRhs().get(0);
-                    if (rhsToGrammarRule.containsKey(rhs0)) {
-                        rhsToGrammarRule.get(rhs0).add(grammarRule);
-                    } else {
-                        rhsToGrammarRule.put(rhs0, new PriorityQueue<>(1, new GrammarRuleCompare()));
-                    }
-
                 } else {
                     HashMap<String, Double> secondLayer = new HashMap<>();
                     secondLayer.put(grammarRule.getLhs(), grammarRule.getWeight());
                     this.unaryRulesMap.put(grammarRule.getRhs().get(0), secondLayer);
-                    
-                    // Adds current grammar rule to rhs to grammar rule 
-                    String rhs0 = grammarRule.getRhs().get(0);
-                    if (rhsToGrammarRule.containsKey(rhs0)) {
-                        rhsToGrammarRule.get(rhs0).add(grammarRule);
-                    } else {
-                        rhsToGrammarRule.put(rhs0, new PriorityQueue<>(1, new GrammarRuleCompare()));
-                    }
                 }
             }
             // System.out.printf("Count: %d\n", count);
@@ -358,8 +321,12 @@ public class CKYParser {
         return parseTreeParent;
     }
 
-    public HashMap<String, PriorityQueue<GrammarRule>> getrhsToGrammarRule() {
+    public HashMap<String, PriorityQueue<GrammarRule>> getRhsToGrammarRule() {
         return this.rhsToGrammarRule;
+    }
+
+    public HashMap<String, PriorityQueue<GrammarRule>> getLhsToGrammarRule() {
+        return this.lhsToGrammarRule;
     }
 
     public HashMap<String, HashMap<String, Double>> getUnaryRulesMap() {
@@ -383,8 +350,63 @@ public class CKYParser {
                 updateGrammarRules(t);
             }
         }
+
+        // Clear the priority queues and then re-add the rules with their updated weights 
+        // Clears the priority queues  
+        this.clearPriorityQMap(this.lhsToGrammarRule);
+        this.clearPriorityQMap(this.rhsToGrammarRule);
+        // Adds the rules with the updates weights for each rhs and lhs
+        for (GrammarRule grammarRule : this.grammarRuleSet.values()) {
+            // Add current grammar to lhs to grammar rule 
+            this.addToPriorityQMap(grammarRule, lhsToGrammarRule, false);
+            // Adds current grammar rule to rhs to grammar rule 
+            this.addToPriorityQMap(grammarRule, rhsToGrammarRule, true);
+        }
     }
 
+    public void addToPriorityQMap(GrammarRule rule, HashMap<String, PriorityQueue<GrammarRule>> sideToGrammarRule, Boolean useRhs)  {
+        if (useRhs) {
+            if (rule.getRhs().size()>1) {
+                String rhs0 = rule.getRhs().get(0);
+                if (sideToGrammarRule.containsKey(rhs0)) {
+                    sideToGrammarRule.get(rhs0).add(rule);
+                } else {
+                    sideToGrammarRule.put(rhs0, new PriorityQueue<>(1, new GrammarRuleCompare()));
+                    sideToGrammarRule.get(rhs0).add(rule);
+                }
+                String rhs1 = rule.getRhs().get(1);
+                if (sideToGrammarRule.containsKey(rhs1)) {
+                    sideToGrammarRule.get(rhs1).add(rule);
+                } else {
+                    sideToGrammarRule.put(rhs1, new PriorityQueue<>(1, new GrammarRuleCompare()));
+                    sideToGrammarRule.get(rhs1).add(rule);
+                }
+            } else {
+                String rhs0 = rule.getRhs().get(0);
+                if (sideToGrammarRule.containsKey(rhs0)) {
+                    sideToGrammarRule.get(rhs0).add(rule);
+                } else {
+                    sideToGrammarRule.put(rhs0, new PriorityQueue<>(1, new GrammarRuleCompare()));
+                    sideToGrammarRule.get(rhs0).add(rule);
+                }
+            }
+        } else {
+            String lhs = rule.getLhs();
+            if (sideToGrammarRule.containsKey(lhs)) {
+                sideToGrammarRule.get(lhs).add(rule);
+            } else {
+                sideToGrammarRule.put(lhs, new PriorityQueue<>(1, new GrammarRuleCompare()));
+                sideToGrammarRule.get(lhs).add(rule);
+            }
 
+        }
+        
 
+    }
+
+    public void clearPriorityQMap(HashMap<String, PriorityQueue<GrammarRule>> sideToGrammarRule) {
+        for (String key : sideToGrammarRule.keySet()) {
+            sideToGrammarRule.get(key).clear();
+        }
+    }
 }

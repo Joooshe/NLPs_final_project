@@ -28,6 +28,7 @@ public class JAW {
         String exampleDataPath = dataDirectory + "testingDataExample.txt";
         String filePathPCFG = dataDirectory + "example.pcfg";
         JAW jaw = new JAW(exampleDataPath, filePathPCFG);
+        jaw.generateTree("NP");
     }
 
     // Array list to store the parse trees for trainingData
@@ -70,20 +71,22 @@ public class JAW {
             e.printStackTrace();
         }
 
-        for(GrammarRule rule : parser.grammarRuleSet.values()) {
-            System.out.println(rule);
-        }
+        // System.out.println("PREVIOUS GRAMMAR SET");
+        // for (GrammarRule rule : parser.grammarRuleSet.values()) {
+        // System.out.println(rule);
+        // }
 
-        for(ParseTree tree: this.trainingParseTrees) {
-            System.out.println(tree);
-            
+        // Update the grammar rules for each tree
+        for (ParseTree tree : this.trainingParseTrees) {
+            // System.out.println(tree);
+
             parser.updateGrammarRules(tree);
         }
 
-        System.out.println("NEW GRAMMAR SET");
-        for(GrammarRule rule : parser.grammarRuleSet.values()) {
-            System.out.println(rule);
-        }
+        // System.out.println("NEW GRAMMAR SET");
+        // for (GrammarRule rule : parser.grammarRuleSet.values()) {
+        // System.out.println(rule);
+        // }
 
         System.out.println(this.trainingParseTrees);
     }
@@ -96,11 +99,10 @@ public class JAW {
     public String generateFromSeedWord(String word) {
         // Use a helper to return the most probable part of speech for the given seed
         // word
-        // ParseTree parseTree = 
-        
+        // ParseTree parseTree =
 
         // Use a helper function to turn that part of speech into grammar tree
-        
+
         // Populate the ends of the grammar tree with words and return those words as a
         // full string
         return "";
@@ -109,45 +111,177 @@ public class JAW {
     public void generateTree(String partOfSpeech) {
         /**
          * 
-        Loop through the CKY parser's rhsToGrammarRule map for max element in priority que and get it 
-
-        Keep doing this until max element is S
-
-        Once max element is S, then we create a parse tree and for its children add the children of S 
-
-        Then, for all the children of the current parse tree: if the lhs of that child is in a set (which we will call 
-        path set), then we add that to the parse tree, if not then we go through lhs to grammar rule and add that to the parse tree 
-
-        We do this until we reach a lexical node 
+         * Loop through the CKY parser's rhsToGrammarRule map for max element in
+         * priority que and get it
+         * 
+         * Keep doing this until max element is S
+         * 
+         * Once max element is S, then we create a parse tree and for its children add
+         * the children of S
+         * 
+         * Then, for all the children of the current parse tree: if the lhs of that
+         * child is in a set (which we will call
+         * path set), then we add that to the parse tree, if not then we go through lhs
+         * to grammar rule and add that to the parse tree
+         * 
+         * We do this until we reach a lexical node
          */
 
-        // PSEUDO CODE 
+        // PSEUDO CODE
         /*
-         * # This code gets us the path 
+         * # This code gets us the path
          * lhsPath = HashSet()
          * 
          * while partOfSpeech != "S":
-         *      lhsSet.add(partOfSpeech)
-         *      # get the next above layer of the tree by going into the priority queue and getting the max element
-         *      grammarRule = rhsToGrammarRule.get(partOfSpeech).peek();
-         *      partOfSpeech = grammarRule.getLhs();
+         * lhsSet.add(partOfSpeech)
+         * # get the next above layer of the tree by going into the priority queue and
+         * getting the max element
+         * grammarRule = rhsToGrammarRule.get(partOfSpeech).peek();
+         * partOfSpeech = grammarRule.getLhs();
          *
          * lhsSet.add(partOfSpeech)
          * 
-         * # make a Q 
+         * # make a Q
          * 
-         * # keep track of last item in Q  
+         * # keep track of last item in Q
          * 
          * # while until Q is non-empty:
-         *      - pop from Q and add all rhs rules as children to that rule 
-         *      - if the rhs rule is lexical then we add the rule as a lexical rule and do not add it to the stack 
+         * - pop from Q and add all rhs rules as children to that rule
+         * - if the rhs rule is lexical then we add the rule as a lexical rule and do
+         * not add it to the stack
          * 
-         * # 
+         * 
+         */
+        GrammarRule grammarRule;
+        HashMap<String, PriorityQueue<GrammarRule>> rhsToGrammarRule = parser.getRhsToGrammarRule();
+        // System.out.println("Keys");
+        // System.out.println(rhsToGrammarRule.keySet());
+        // Initialize the path that we will take up the tree, this path will consiste of
+        // the grammar rules we take up the tree
+        // We put the grammar rule's sudo hash into the tree so we can find it again
+        // when we go back down the tree
+        HashMap<String, GrammarRule> path = new HashMap<>();
+
+        while (!partOfSpeech.equals("S")) {
+            // Get the grammar rule that is most likely to produce the partOfSpeech on the
+            // right hand side
+            PriorityQueue<GrammarRule> pQueue = rhsToGrammarRule.get(partOfSpeech);
+            if (pQueue != null) {
+                grammarRule = pQueue.peek();
+            } else {
+                System.out.printf("ERROR: Part of speech not fund: %s\n", partOfSpeech);
+                break;
+            }
+            // Get the lhs for that grammar rule (that we will use as the rhs for the next
+            // layer of the tree)
+            System.out.println(partOfSpeech);
+            partOfSpeech = grammarRule.getLhs();
+            // Add that part of speech to the path
+            path.put(partOfSpeech, grammarRule);
+        }
+        System.out.println("path:");
+        System.out.println(path.keySet());
+
+        /**
+         * * # make a Q
+         * 
+         * # keep track of last item in Q
+         * 
+         * # while until Q is non-empty:
+         * - pop from Q and add all rhs rules as children to that rule
+         * - if the rhs rule is lexical then we add the rule as a lexical rule and do
+         * not add it to the stack
+         * 
+         * 
          */
 
-        // Keep a running total of the max, use the max for the next step until we get to S 
+        /**
+         * // Create q, add the beginning (S) to the q
+         * // This q is for going through the parts of speech in the tree
+         * Queue<String> partOfSpeechQ = new Queue
+         * partOfSpeechQ.add("S")
+         * // Create a qthat will have the same size, this q will be for keeping the
+         * Parse
+         * // Tree node that corresponds to that part of speech in the tree
+         * Queue<ParseTree> parseTreeQ
+         * parseTreeQ.add(new ParseTree("S"))
+         * 
+         * 
+         * while (partOfSpeechQ.size() > 0) {
+         * // Pop the first item from both qs: lhs and parse tree
+         * // Use the lhs to get the grammar rule first checking in path. IF it is in
+         * path, we remove it from path
+         * // If its not in path, we go through lhs to grammarRule to get the grammar
+         * rule
+         * // Get the rhs of the grammar rule
+         * // Create parse trees based off of the rhs and add to children of current
+         * parse tree
+         * // Add these parse trees to the parseTreeQ
+         * // Add rhs to the partOfSpeechQ
+         * }
+         */
+        // Get the lhs to grammar rule hash map that we will use if the lhs rule is not
+        // in the path
+        HashMap<String, PriorityQueue<GrammarRule>> lhsToGrammarRule = parser.getLhsToGrammarRule();
+        // Create a queue for both partOfSpeech and parseTree nodes (which will be equal
+        // sized)
+        // These queues will be used to create the parse tree and access the grammar
+        // rules that correspond
+        // to each part of speech
+        // The algorithm works by using the part of speech as a key to access the
+        // grammar rules in the hashmap
+        // lhsToGrammarRule or path. We then use the grammar rules to create parse tree
+        // nodes that we make into
+        // children of the current parse tree node.
+        LinkedList<String> partOfSpeechQ = new LinkedList<>();
+        partOfSpeechQ.add("S");
+        LinkedList<ParseTree> parseTreeQ = new LinkedList<>();
+        ParseTree head = new ParseTree("S", false);
+        parseTreeQ.add(head);
+        // Go until the queue is empty. We stop adding to the queue if a node is
+        // lexical.
+        while (partOfSpeechQ.size() > 0) {
+            // System.out.printf("Size: %d\n", partOfSpeechQ.size());
+            // System.out.println(partOfSpeechQ);
+            String lhs = partOfSpeechQ.remove();
+            ParseTree currentNode = parseTreeQ.remove();
+            GrammarRule rule;
+            // Get the grammar rule
+            if (path.containsKey(lhs)) {
+                rule = path.get(lhs);
+                // System.out.println("Rule from path: " + rule);
+                path.remove(lhs);
+            } else {
+                rule = lhsToGrammarRule.get(lhs).peek();
+                // System.out.println("lhs: " + lhs);
+                // System.out.println("Rule from lhsToGrammarRule: " + rule);
+            }
+            // For each rhs in the grammar rule make a corresponding child for the parse
+            // tree
+            for (String rhsPartOfSpeech : rule.getRhs()) {
+                if (rule.isLexical()) {
+                    // Create child
+                    ParseTree child = new ParseTree(rhsPartOfSpeech, true);
+                    // Add as child to current node
+                    currentNode.addChild(child);
+                } else {
+                    ParseTree child = new ParseTree(rhsPartOfSpeech, false);
+                    // Add as child to current node
+                    currentNode.addChild(child);
+                    // Add child to queue
+                    partOfSpeechQ.add(rhsPartOfSpeech);
+                    parseTreeQ.add(child);
+                }
+            }
+        }
 
-        // 
+        System.out.println("HEAD");
+        System.out.println(head);
+
+        // Keep a running total of the max, use the max for the next step until we get
+        // to S
+
+        //
 
     }
 
