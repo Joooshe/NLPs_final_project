@@ -126,7 +126,7 @@ public class ParseTree {
 	 * 
 	 * @return an iterable object over the children parse trees
 	 */
-	public Iterable<ParseTree> getChildren() {
+	public ArrayList<ParseTree> getChildren() {
 		return children;
 	}
 

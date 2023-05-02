@@ -24,11 +24,13 @@ public class JAW {
 
     public static void main(String[] args) {
         String dataDirectory = "C:\\Users\\Joshua G-K\\Documents\\College\\Junior Year\\NLPs\\final_projectv2\\NLPs_final_project\\JAW_Model\\Data\\";
-        String trainingDataPath = dataDirectory + "test.sentences";
+        String testSentencesPath = dataDirectory + "test.sentences";
         String exampleDataPath = dataDirectory + "testingDataExample.txt";
-        String filePathPCFG = dataDirectory + "example.pcfg";
-        JAW jaw = new JAW(exampleDataPath, filePathPCFG);
-        jaw.generateTree("NP");
+        String trainingDataPath = dataDirectory + "trainingData.txt";
+        String examplePCFGPath = dataDirectory + "example.pcfg";
+        String fullPCFGPath = dataDirectory + "full.pcfg";
+        JAW jaw = new JAW(trainingDataPath, fullPCFGPath);
+        jaw.generateFromSeedWord("Joshua");
     }
 
     // Array list to store the parse trees for trainingData
@@ -99,16 +101,50 @@ public class JAW {
     public String generateFromSeedWord(String word) {
         // Use a helper to return the most probable part of speech for the given seed
         // word
-        // ParseTree parseTree =
-
+        HashMap<String, PriorityQueue<GrammarRule>> rhsToGrammarRule = this.parser.getRhsToGrammarRule();
+        String partOfSpeech;
+        if (rhsToGrammarRule.containsKey(word)) {
+            partOfSpeech = rhsToGrammarRule.get(word).peek().getLhs();
+        } else {
+            partOfSpeech = "NNP";
+        }
         // Use a helper function to turn that part of speech into grammar tree
+        ParseTree root = this.generateTree(partOfSpeech);
+        // Now we must depth first search in order to populate the ends of the grammar tree with 
+        // words and return those words as a full string
+        LinkedList<ParseTree> parseTreeStack = new LinkedList<>();
+        parseTreeStack.add(root);
+        // Create thing to store the sentence 
+        ArrayList<String> sentence = new ArrayList<>();
 
-        // Populate the ends of the grammar tree with words and return those words as a
-        // full string
+        while (parseTreeStack.size() > 0) {
+            ParseTree node = parseTreeStack.removeLast();
+            ListIterator<ParseTree> iter = node.getChildren().listIterator(node.getChildren().size());
+
+            while (iter.hasPrevious()) {
+                ParseTree child = iter.previous();
+                if (child.isTerminal()) {
+                    sentence.add(child.getLabel());
+                } else {
+                    parseTreeStack.add(child);
+                }  
+            }
+            // for (ParseTree child : node.getChildren()) {
+            //     if (child.isTerminal()) {
+            //         sentence.add(child.getLabel());
+            //     } else {
+            //         parseTreeStack.add(child);
+            //     }   
+            // }
+        }
+        System.out.println("SENTENCES");
+        System.out.println(sentence);
+
+
         return "";
     }
 
-    public void generateTree(String partOfSpeech) {
+    public ParseTree generateTree(String partOfSpeech) {
         /**
          * 
          * Loop through the CKY parser's rhsToGrammarRule map for max element in
@@ -240,21 +276,34 @@ public class JAW {
         parseTreeQ.add(head);
         // Go until the queue is empty. We stop adding to the queue if a node is
         // lexical.
+        /**
+         * TODO: Fix infinite loop here caused by repeatedly going through pcfg 
+         */
+        HashMap<String, ArrayList<GrammarRule>> removedRules = new HashMap<>();
         while (partOfSpeechQ.size() > 0) {
-            // System.out.printf("Size: %d\n", partOfSpeechQ.size());
-            // System.out.println(partOfSpeechQ);
+            System.out.printf("Size: %d\n", partOfSpeechQ.size());
+            System.out.println(partOfSpeechQ);
             String lhs = partOfSpeechQ.remove();
             ParseTree currentNode = parseTreeQ.remove();
             GrammarRule rule;
             // Get the grammar rule
             if (path.containsKey(lhs)) {
                 rule = path.get(lhs);
-                // System.out.println("Rule from path: " + rule);
                 path.remove(lhs);
             } else {
-                rule = lhsToGrammarRule.get(lhs).peek();
-                // System.out.println("lhs: " + lhs);
-                // System.out.println("Rule from lhsToGrammarRule: " + rule);
+                // Removes the rule so we do not run into any infinite loops 
+                rule = lhsToGrammarRule.get(lhs).poll();
+                if (rule == null) {
+                    System.out.println("RULE IS NULL FOR LHS: " + lhs);
+                    continue;
+                }
+                // Ensures we can add the rules back when we are done 
+                if (removedRules.containsKey(lhs)) {
+                    removedRules.get(lhs).add(rule);
+                } else {
+                    removedRules.put(lhs, new ArrayList<GrammarRule>());
+                    removedRules.get(lhs).add(rule);
+                }
             }
             // For each rhs in the grammar rule make a corresponding child for the parse
             // tree
@@ -274,14 +323,19 @@ public class JAW {
                 }
             }
         }
+        // Adds the rules that we removed back 
+        for (String lhs : removedRules.keySet()) {
+            for (GrammarRule rule : removedRules.get(lhs)) {
+                Boolean offer = lhsToGrammarRule.get(lhs).offer(rule);
+                if (!offer) {
+                    System.out.println("FAILED TO ADD RULE BACK TO GRAMMAR");
+                }
+            }
+        }
 
         System.out.println("HEAD");
         System.out.println(head);
-
-        // Keep a running total of the max, use the max for the next step until we get
-        // to S
-
-        //
+        return head;
 
     }
 
