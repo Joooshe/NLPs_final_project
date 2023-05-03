@@ -3,7 +3,7 @@ import java.util.*;
 
 public class CKYParser {
     public static final String NULL_STRING = "NULL";
-    public static final Double RECONSTRUCT_FACTOR = 0.8;
+    public static final Double RECONSTRUCT_FACTOR = 0.5;
     /*
      * Unary rules hashmap
      * - This will map all the Unary rules on the rhs to the rule on the lhs and

@@ -30,8 +30,15 @@ public class JAW {
         String testingDataPath = dataDirectory + "testingData.txt";
         String examplePCFGPath = dataDirectory + "example.pcfg";
         String fullPCFGPath = dataDirectory + "full.pcfg";
-        JAW jaw = new JAW(trainingDataPath, testingDataPath, fullPCFGPath);
+        String academicStyle = dataDirectory + "AcademicStyle.txt";
+        String childrensBookStyle = dataDirectory + "ChildrensBookStyle.txt";
+        String emptyFile = dataDirectory + "empty.txt";
+        JAW jaw = new JAW(academicStyle, childrensBookStyle, fullPCFGPath);
         jaw.evaluateModel("William");
+        jaw.generateFromSeedWord("William");
+
+        // String cleanTest = JAW.cleanSentence("Testing, to see if this's cleaned.");
+        // System.out.println(cleanTest);
     }
 
     // Array list to store the parse trees for trainingData
@@ -416,25 +423,33 @@ public class JAW {
         ParseTree generatedTree = this.generateTree(partOfSpeech);
 
         // Get the training data average precision recall
-        for (ParseTree trainingTree : trainingParseTrees) {
-            trainingDataPrecisionRecall += this.calculatePrecisionRecall(trainingTree, generatedTree);
+        for (ParseTree parseTree : trainingParseTrees) {
+            Double add = this.calculatePrecisionRecall(parseTree, generatedTree);
+            if (Double.isNaN(add)) {
+                add=0.0;
+            }
+            trainingDataPrecisionRecall += add;
         }
         trainingDataPrecisionRecall = trainingDataPrecisionRecall / trainingParseTrees.size();
-        if (Double.isNaN(trainingDataPrecisionRecall)) {
-            trainingDataPrecisionRecall = 0.0;
-        }
+        // if (Double.isNaN(trainingDataPrecisionRecall)) {
+        //     trainingDataPrecisionRecall = 0.0;
+        // }
         // Get the testing data average precision recall 
         Double testingDataPrecisionRecall = 0.0;
         for (ParseTree parseTree : testingParseTrees) {
-            System.out.println("Parse tree: "+parseTree);
-            testingDataPrecisionRecall += this.calculatePrecisionRecall(parseTree, generatedTree);
+            // System.out.println("Parse tree: "+parseTree);
+            Double add = this.calculatePrecisionRecall(parseTree, generatedTree);
+            if (Double.isNaN(add)) {
+                add=0.0;
+            }
+            testingDataPrecisionRecall += add;
         }
-        System.out.println("TestingDataPrecisionRecall: " + testingDataPrecisionRecall);
+        // System.out.println("TestingDataPrecisionRecall: " + testingDataPrecisionRecall);
         
         testingDataPrecisionRecall = testingDataPrecisionRecall / testingParseTrees.size();
-        if (Double.isNaN(testingDataPrecisionRecall)) {
-            testingDataPrecisionRecall = 0.0;
-        }
+        // if (Double.isNaN(testingDataPrecisionRecall)) {
+        //     testingDataPrecisionRecall = 0.0;
+        // }
 
         System.out.printf("trainingData: %f \t testingData: %f\n", trainingDataPrecisionRecall, testingDataPrecisionRecall);
     }
@@ -476,8 +491,11 @@ public class JAW {
         // // Gets rid of all accent marks on letters and makes it normal letter
         // sentence = Normalizer.normalize(sentence, Normalizer.Form.NFD);
         // Part of getting rid of accent marks
-        sentence = sentence.replaceAll("'(\\w)+", "\\s'$1");
-        // Gets rid of spaces created from deleting spaces and dashes and such
+        sentence = sentence.replaceAll("'(\\w)+", " '$1");
+        sentence = sentence.replaceAll(", ", " , ");
+        sentence = sentence.replaceAll("\\.", " \\.");
+        // sentence = sentence.replaceAll("(\\w)+.", "$1\\s.");
+        // // Gets rid of spaces created from deleting spaces and dashes and such
         sentence = sentence.replaceAll("\\s+", " ");
         // // Makes word lower case
         // sentence = sentence.toLowerCase();
