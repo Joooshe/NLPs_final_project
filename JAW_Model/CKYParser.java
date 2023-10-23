@@ -1,6 +1,11 @@
 import java.io.*;
 import java.util.*;
 
+/**
+ * A class used to parse the sentences in a data file. It uses the CKY Parser algorithm to do so 
+ * 
+ * @author Joshua Garcia-Kimble, William Yang
+ */
 public class CKYParser {
     public static final String NULL_STRING = "NULL";
     public static final Double RECONSTRUCT_FACTOR = 0.5;

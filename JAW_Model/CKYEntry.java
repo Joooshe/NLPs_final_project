@@ -1,28 +1,11 @@
 import java.util.*;
 
+/**
+ * A class that contains an individual entry of the CKYParser table
+ * 
+ * @author Joshua Garcia-Kimble, William Yang
+ */
 public class CKYEntry {
-    // Name for the list size of the CKYEntry list in ruleChildrenMap
-    // public static final int CKY_LIST_SIZE = 2;
-
-    /*
-     * Hashmap that contains the lhs rule and the weight for it
-     * - We add all the lhs rules and their weights to this hashmap.
-     * These are the lhs rules and weights needed to do the CKY algorithm
-     */
-    // private HashMap<String, Double> ruleWeightMap;
-
-    /*
-     * Hashmap that contains the lhs rule and the children CKYEntries that
-     * made that rule so we can back track to make the parse tree
-     */
-    // private HashMap<String, CKYEntry[]> ruleChildrenMap;
-
-    /*
-     * Hashmap that contains the lhs rule and the rhs that these lhs rule goes to
-     * The first rhs rule corresponds ot the first CKY entry and the second rhs rule
-     * corresponds to the second CKY entry
-     */
-    // private HashMap<String, ArrayList<String>> lhsToRhs;
 
     // Or put all of the above hash maps into a hashmap that maps to a triple
     private HashMap<String, Triplet> rules;

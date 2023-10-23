@@ -5,20 +5,16 @@ import java.text.Normalizer;
 import java.util.*;
 
 /**
- * TODO: 
- * - finish generate tree from seed word, pseudo code is pretty much there, just gotta code it 
- * - then we need to do evaluation and we r done 
- *  - eveluation we do precision recall, so we just need a precision recall helper function 
- *  - then call that helper function on all the training Data trees and average them 
- */
-
-/**
  * JAW takes:
  * - a filepath to training data. This training data consists of one english
  * sentence pre line that we will try to
  * copy the style of
  * - a file path to a PCFG that we will update based off of the parse trees we
  * get for the english sentences in training data
+ * 
+ * Takes about 1 minute to run 
+ * 
+ * @author Joshua Garcia-Kimble, William Yang, Anxin Yi
  */
 public class JAW {
 
@@ -59,7 +55,6 @@ public class JAW {
      */
     public JAW(String trainingData, String testingData, String filePathPCFG) {
         // Initialize variables
-        System.out.println(filePathPCFG);
         this.parser = new CKYParser(filePathPCFG);
         this.trainingParseTrees = new ArrayList<>();
         this.testingParseTrees = new ArrayList<>();
@@ -67,26 +62,22 @@ public class JAW {
         this.generateParseTrees(parser, trainingParseTrees, trainingData);
         this.generateParseTrees(parser, testingParseTrees, testingData);
 
-        // System.out.println("PREVIOUS GRAMMAR SET");
-        // for (GrammarRule rule : parser.grammarRuleSet.values()) {
-        // System.out.println(rule);
-        // }
-
         // Update the grammar rules for each tree
         for (ParseTree tree : this.trainingParseTrees) {
-            // System.out.println(tree);
-
             parser.updateGrammarRules(tree);
         }
-
-        // System.out.println("NEW GRAMMAR SET");
-        // for (GrammarRule rule : parser.grammarRuleSet.values()) {
-        // System.out.println(rule);
-        // }
 
         System.out.println(this.trainingParseTrees);
     }
 
+    /**
+     * Takes in a sentence parser (CKYParser) and a path to the data file (data) and parses all of the 
+     * strings on each line in the data file and adds the parseTrees of those strings to parseTreeList
+     * @param parser The program to parse a sentence given a context free grammar 
+     * @param parseTreeList The array list of parseTrees we want to add the parseTrees of sentences in data to
+     * @param data the path to the file with the sentences we want to parse, one sentence per line 
+     * @return No return, just adds the parseTrees to parseTreeList
+     */
     public void generateParseTrees(CKYParser parser, ArrayList<ParseTree> parseTreeList, String data) {
         BufferedReader reader;
         try {
@@ -117,6 +108,8 @@ public class JAW {
      * This function takes in a seed word and generates a sentence with a similar
      * style to the training data based off
      * of that seed word
+     * @param word generates a sentence based off a seed word 
+     * @return the sentence we generated 
      */
     public String generateFromSeedWord(String word) {
         // Use a helper to return the most probable part of speech for the given seed
@@ -149,21 +142,19 @@ public class JAW {
                     parseTreeStack.add(child);
                 }  
             }
-            // for (ParseTree child : node.getChildren()) {
-            //     if (child.isTerminal()) {
-            //         sentence.add(child.getLabel());
-            //     } else {
-            //         parseTreeStack.add(child);
-            //     }   
-            // }
         }
-        System.out.println("SENTENCES");
-        System.out.println(sentence);
 
+        System.out.println("SENTENCE GENERATED:");
+        System.out.println(sentence);
 
         return "";
     }
 
+    /**
+     * Generates a parse tree based off a partOfSpeech
+     * @param partOfSpeech a part of speech that our probabilistic context free grammar recognizes 
+     * @return a parse tree based off the partOfSpeech
+     */
     public ParseTree generateTree(String partOfSpeech) {
         /**
          * 
@@ -235,8 +226,7 @@ public class JAW {
             // Add that part of speech to the path
             path.put(partOfSpeech, grammarRule);
         }
-        System.out.println("path:");
-        System.out.println(path.keySet());
+        
 
         /**
          * * # make a Q
@@ -249,32 +239,6 @@ public class JAW {
          * not add it to the stack
          * 
          * 
-         */
-
-        /**
-         * // Create q, add the beginning (S) to the q
-         * // This q is for going through the parts of speech in the tree
-         * Queue<String> partOfSpeechQ = new Queue
-         * partOfSpeechQ.add("S")
-         * // Create a qthat will have the same size, this q will be for keeping the
-         * Parse
-         * // Tree node that corresponds to that part of speech in the tree
-         * Queue<ParseTree> parseTreeQ
-         * parseTreeQ.add(new ParseTree("S"))
-         * 
-         * 
-         * while (partOfSpeechQ.size() > 0) {
-         * // Pop the first item from both qs: lhs and parse tree
-         * // Use the lhs to get the grammar rule first checking in path. IF it is in
-         * path, we remove it from path
-         * // If its not in path, we go through lhs to grammarRule to get the grammar
-         * rule
-         * // Get the rhs of the grammar rule
-         * // Create parse trees based off of the rhs and add to children of current
-         * parse tree
-         * // Add these parse trees to the parseTreeQ
-         * // Add rhs to the partOfSpeechQ
-         * }
          */
         // Get the lhs to grammar rule hash map that we will use if the lhs rule is not
         // in the path
@@ -296,13 +260,8 @@ public class JAW {
         parseTreeQ.add(head);
         // Go until the queue is empty. We stop adding to the queue if a node is
         // lexical.
-        /**
-         * TODO: Fix infinite loop here caused by repeatedly going through pcfg 
-         */
         HashMap<String, ArrayList<GrammarRule>> removedRules = new HashMap<>();
         while (partOfSpeechQ.size() > 0) {
-            System.out.printf("Size: %d\n", partOfSpeechQ.size());
-            System.out.println(partOfSpeechQ);
             String lhs = partOfSpeechQ.remove();
             ParseTree currentNode = parseTreeQ.remove();
             GrammarRule rule;
@@ -353,8 +312,6 @@ public class JAW {
             }
         }
 
-        System.out.println("HEAD");
-        System.out.println(head);
         return head;
 
     }
@@ -376,6 +333,12 @@ public class JAW {
     }
 
 
+    /**
+     * Used for comparing trees
+     * @param tree1 a tree to compare
+     * @param tree2 the other tree to compare 
+     * @return the number of nodes that match between the given trees
+     */
     private int countMatchedNodes(ParseTree tree1, ParseTree tree2) {
         if (tree1 == null || tree2 == null || tree1.isTerminal() || tree2.isTerminal()) {
             return 0;
@@ -394,8 +357,6 @@ public class JAW {
         }
         
         return count;
-
-
     }
 
     private int countTotalNodes(ParseTree tree) {
@@ -410,6 +371,12 @@ public class JAW {
         return count;
     }
 
+    /**
+     * Evaluates the model by taking a seedword and has the model create a parse tree from the seed word, we then
+     * compare the parse tree from our model to the parse trees from our training data and print out the precisionRecall
+     * @param seedWord the word to start letting our parse tree generate a sentence  
+     * @return None, instead it prints out the results
+     */
     public void evaluateModel(String seedWord) {
         // Get the tree from the part of speech of the seed word 
         HashMap<String, PriorityQueue<GrammarRule>> rhsToGrammarRule = this.parser.getRhsToGrammarRule();
@@ -431,43 +398,26 @@ public class JAW {
             trainingDataPrecisionRecall += add;
         }
         trainingDataPrecisionRecall = trainingDataPrecisionRecall / trainingParseTrees.size();
-        // if (Double.isNaN(trainingDataPrecisionRecall)) {
-        //     trainingDataPrecisionRecall = 0.0;
-        // }
+        
         // Get the testing data average precision recall 
         Double testingDataPrecisionRecall = 0.0;
         for (ParseTree parseTree : testingParseTrees) {
-            // System.out.println("Parse tree: "+parseTree);
             Double add = this.calculatePrecisionRecall(parseTree, generatedTree);
             if (Double.isNaN(add)) {
                 add=0.0;
             }
             testingDataPrecisionRecall += add;
         }
-        // System.out.println("TestingDataPrecisionRecall: " + testingDataPrecisionRecall);
         
         testingDataPrecisionRecall = testingDataPrecisionRecall / testingParseTrees.size();
-        // if (Double.isNaN(testingDataPrecisionRecall)) {
-        //     testingDataPrecisionRecall = 0.0;
-        // }
 
         System.out.printf("trainingData: %f \t testingData: %f\n", trainingDataPrecisionRecall, testingDataPrecisionRecall);
     }
-
-
-    // public String getRandomSeedWordFromTree(ParseTree tree) {
-    //     List<String> terminalNodes = new ArrayList<>();
-    //     return "";
-    // }
-
-  
-    
-
     
     /**
      * Cleans a given word
-     * 
-     * @param word the word to clean
+     * @param word The word to clean, different from clean sentence because this is just for a word
+     * @return The cleaned word that is not ready for our model to process
      */
     public static String cleanWord(String word) {
         // Gets rid of all accent marks on letters and makes it normal letter
@@ -485,22 +435,16 @@ public class JAW {
 
     /**
      * Cleans a sentence by repeatedly calling cleanWord
-     * 
+     * @param sentence the sentence to clean
+     * @return A string that is cleaned up for the model to process
      */
     public static String cleanSentence(String sentence) {
-        // // Gets rid of all accent marks on letters and makes it normal letter
-        // sentence = Normalizer.normalize(sentence, Normalizer.Form.NFD);
-        // Part of getting rid of accent marks
+        // Cleans up commas, periods, and words by adding white space
         sentence = sentence.replaceAll("'(\\w)+", " '$1");
         sentence = sentence.replaceAll(", ", " , ");
         sentence = sentence.replaceAll("\\.", " \\.");
-        // sentence = sentence.replaceAll("(\\w)+.", "$1\\s.");
-        // // Gets rid of spaces created from deleting spaces and dashes and such
+        // Gets rid of spaces created from deleting spaces and dashes and such
         sentence = sentence.replaceAll("\\s+", " ");
-        // // Makes word lower case
-        // sentence = sentence.toLowerCase();
-        // // Gets rid of all non-alphabetic words
-        // sentence = sentence.replaceAll("[^\\w\\s]", "");
         return sentence;
 
     }

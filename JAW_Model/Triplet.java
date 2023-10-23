@@ -2,6 +2,12 @@ enum RuleType {
     LEXICAL, UNARY, BINARY
 }
 
+/**
+ * A class used to store the type of rule in our context free grammar
+ * There are 3 types of rules denoted by the RuleType enum above
+ * 
+ * @author Joshua Garcia-Kimble, William Yang
+ */
 public class Triplet {
 
     private String lhs;
